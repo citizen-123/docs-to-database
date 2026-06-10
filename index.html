@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>docs-to-database — Database Discovery Packet</title>
+  <meta name="description" content="A self-guided discovery packet for small businesses moving from spreadsheets and email to a real database. Fill it out in the browser, import your spreadsheets to prefill it, export as Word, PDF, or Markdown." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/print.css" media="print" />
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-name">docs-to-database</span>
+      <span class="brand-sub">Database Discovery Packet</span>
+    </div>
+    <span id="suggestion-badge" title="Machine-suggested values that no one has confirmed yet"></span>
+    <div class="toolbar">
+      <div class="tool-group" aria-label="Progress">
+        <button id="btn-save-json" title="Download your answers as a .json file you can re-import later">Save progress</button>
+        <button id="btn-load-json" title="Load a previously saved .json file">Load progress</button>
+      </div>
+      <div class="tool-group" aria-label="Export">
+        <button id="btn-export-md" title="Export the filled packet as Markdown">Markdown</button>
+        <button id="btn-export-docx" title="Export the filled packet as a Word document">Word</button>
+        <button id="btn-export-pdf" title="Open the print dialog — choose “Save as PDF”">PDF</button>
+      </div>
+      <div class="tool-group" aria-label="Other">
+        <button id="btn-print-blank" title="Print empty worksheets to fill out by hand">Print blank packet</button>
+        <button id="btn-clear" class="danger" title="Erase everything and start over">Clear</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar" aria-label="Worksheets"></aside>
+    <main id="main"></main>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="print-holder" aria-hidden="true"></div>
+
+  <input type="file" id="json-input" accept=".json,application/json" hidden />
+  <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple hidden />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
