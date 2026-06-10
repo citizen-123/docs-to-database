@@ -299,6 +299,32 @@ function sidebar() {
   return nav;
 }
 
+// ── prev/next pager ─────────────────────────────────────────────
+const viewOrder = () => ["home", "import", ...PACKET.worksheets.map((w) => w.id)];
+
+function viewLabel(id) {
+  if (id === "home") return "Start here";
+  if (id === "import") return "Import spreadsheets";
+  const ws = getWorksheet(id);
+  return ws ? `${ws.num}. ${ws.title}` : id;
+}
+
+function pager() {
+  const order = viewOrder();
+  const idx = order.indexOf(currentView);
+  if (idx === -1) return null;
+  const prev = idx > 0 ? order[idx - 1] : null;
+  const next = idx < order.length - 1 ? order[idx + 1] : null;
+  const nav = el("nav", { class: "pager", "aria-label": "Previous and next worksheet" });
+  const btn = (id, dir) =>
+    el("button", { class: `pager-btn ${dir}`, type: "button", onclick: () => setView(id) },
+      el("span", { class: "pager-dir" }, dir === "prev" ? "← Previous" : "Next →"),
+      el("span", { class: "pager-target" }, viewLabel(id)));
+  nav.append(prev ? btn(prev, "prev") : el("span"));
+  if (next) nav.append(btn(next, "next"));
+  return nav;
+}
+
 // ── top-level render ────────────────────────────────────────────
 export function renderApp() {
   const side = document.getElementById("sidebar");
@@ -313,4 +339,6 @@ export function renderApp() {
     const ws = getWorksheet(currentView);
     main.append(ws ? worksheetPane(ws) : homePane());
   }
+  const p = pager();
+  if (p) main.append(p);
 }

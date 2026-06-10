@@ -89,6 +89,7 @@ async function handleFiles(files) {
         lines.push(
           `<div class="report-card"><strong>${escapeHTML(file.name)}${report.tabs.length > 1 ? " — " + escapeHTML(tab.name) : ""}</strong>` +
           `<br>${tab.rowCount} rows · ${tab.columnCount} columns → prefilled a Spreadsheet Audit and a Data Dictionary table.` +
+          (tab.skippedRows ? `<br>Skipped ${tab.skippedRows} title/preamble row${tab.skippedRows === 1 ? "" : "s"} above the real header.` : "") +
           (tab.statusColumns.length ? `<br>Status-like columns found: ${tab.statusColumns.map(escapeHTML).join(", ")} (every distinct value captured, typos included).` : "") +
           (tab.repeatedGroups.length ? `<br>Repeated column groups: ${tab.repeatedGroups.map((g) => escapeHTML(g.columns.join(", "))).join(" · ")}` : "") +
           `</div>`
