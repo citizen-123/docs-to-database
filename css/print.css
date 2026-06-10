@@ -1,0 +1,56 @@
+/* print.css — applied only for window.print(). Hides the app, shows the report. */
+
+@page {
+  size: letter;
+  margin: 18mm 16mm;
+}
+
+body.printing #topbar,
+body.printing #layout,
+body.printing #toast {
+  display: none !important;
+}
+body.printing #print-holder {
+  display: block !important;
+}
+
+.print-report {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 10.5pt;
+  color: #111;
+  line-height: 1.45;
+}
+.print-report h1 {
+  font-family: "IBM Plex Serif", georgia, serif;
+  font-size: 20pt;
+  margin: 0 0 4pt;
+}
+.print-report h2 {
+  font-family: "IBM Plex Serif", georgia, serif;
+  font-size: 15pt;
+  margin: 0 0 8pt;
+  padding-bottom: 3pt;
+  border-bottom: 1.5pt solid #111;
+}
+.print-report h3 { font-size: 12pt; margin: 14pt 0 4pt; }
+.print-report h4 { font-size: 10.5pt; margin: 10pt 0 3pt; }
+.rep-ws { page-break-before: always; }
+.rep-ws:first-of-type { page-break-before: auto; }
+.rep-meta, .rep-blurb, .rep-help { color: #444; font-size: 9.5pt; }
+.rep-warn { color: #9a5b06; font-weight: 600; border: 1pt solid #9a5b06; padding: 6pt 8pt; }
+.rep-note { font-style: italic; }
+.rep-empty { color: #888; font-style: italic; margin: 2pt 0; }
+.rep-answer { white-space: pre-wrap; margin: 2pt 0 0; }
+.rep-field { break-inside: avoid; margin-bottom: 6pt; }
+.rep-line { border-bottom: 0.75pt solid #999; height: 16pt; }
+.rep-table { border-collapse: collapse; width: 100%; margin: 3pt 0; }
+.rep-table th, .rep-table td {
+  border: 0.75pt solid #555;
+  padding: 3pt 5pt;
+  font-size: 8.5pt;
+  text-align: left;
+  vertical-align: top;
+}
+.rep-table th { background: #eee; font-weight: 600; }
+.rep-table tr { break-inside: avoid; }
+.rep-rules ul { margin: 2pt 0; padding-left: 14pt; }
