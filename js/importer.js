@@ -73,6 +73,7 @@ function importWorkbook(wb, fileName) {
     report.tabs.push({
       name: tab,
       rowCount: analysis.rowCount,
+      skippedRows: analysis.headerRowIndex,
       columnCount: analysis.columns.length,
       statusColumns: analysis.statusColumns.map((c) => c.name),
       repeatedGroups: analysis.repeatedGroups,

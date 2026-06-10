@@ -33,14 +33,54 @@ export function fillLabel(fillRate) {
   return "rarely";
 }
 
+// ── header-row detection ────────────────────────────────────────
+const isFilled = (c) => c != null && String(c).trim() !== "";
+
+// Report-style exports (billing statements, system reports) put a title block
+// above the real header: a merged title cell, account lines, dates, blank
+// spacers. Score each row near the top on how header-like it is — wide, all
+// words, no repeats, data underneath — and pick the best. A small earliness
+// bonus means plain sheets with headers in row 1 are untouched.
+export function detectHeaderRow(rows, scanLimit = 25) {
+  const limit = Math.min(rows.length, scanLimit);
+  let best = 0, bestScore = -Infinity;
+  for (let i = 0; i < limit; i++) {
+    const cells = rows[i].filter(isFilled);
+    if (!cells.length) continue;
+    const textish = cells.filter(
+      (c) => typeof c === "string" && isNaN(Number(String(c).trim().replace(/,/g, "")))
+    ).length;
+    const distinct = new Set(cells.map((c) => String(c).trim().toLowerCase())).size;
+    let j = i + 1;
+    while (j < rows.length && !rows[j].some(isFilled)) j++;
+    const below = j < rows.length ? rows[j].filter(isFilled).length : 0;
+    const score =
+      cells.length * 2 +                      // headers span the sheet's width
+      textish +                               // headers are words, not values
+      (distinct === cells.length ? 2 : 0) +   // labels don't repeat
+      Math.min(below, cells.length) -         // data sits underneath
+      i * 0.5;                                // near-ties go to the earlier row
+    if (score > bestScore) { bestScore = score; best = i; }
+  }
+  return best;
+}
+
 // ── per-sheet analysis ──────────────────────────────────────────
-// rows: array of arrays; first row assumed headers if it looks like headers.
+// rows: array of arrays; header row is detected (reports bury it under a
+// title block), blank rows are dropped, and trailing total/footer lines —
+// rows much emptier than the typical data row — are trimmed off.
 export function analyzeSheet(sheetName, rows) {
   if (!rows || !rows.length) {
-    return { sheetName, headerRow: [], rowCount: 0, columns: [], repeatedGroups: [], statusColumns: [] };
+    return { sheetName, headerRowIndex: 0, headerRow: [], rowCount: 0, columns: [], repeatedGroups: [], statusColumns: [] };
   }
-  const headerRow = rows[0].map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
-  const body = rows.slice(1);
+  const headerRowIndex = detectHeaderRow(rows);
+  const headerRow = rows[headerRowIndex].map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
+  const body = rows.slice(headerRowIndex + 1).filter((r) => r.some(isFilled));
+  const fills = body.map((r) => r.filter(isFilled).length).sort((a, b) => a - b);
+  const medianFill = fills.length ? fills[Math.floor(fills.length / 2)] : 0;
+  while (body.length && body[body.length - 1].filter(isFilled).length < Math.max(2, medianFill / 2)) {
+    body.pop();
+  }
   const sample = body.length > SAMPLE_LIMIT ? body.slice(0, SAMPLE_LIMIT) : body;
 
   const columns = headerRow.map((name, ci) => {
@@ -77,6 +117,7 @@ export function analyzeSheet(sheetName, rows) {
 
   return {
     sheetName,
+    headerRowIndex,
     headerRow,
     rowCount: body.length,
     columns,

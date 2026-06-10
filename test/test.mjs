@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { PACKET, getWorksheet } from "../js/schema.js";
 import * as S from "../js/state.js";
-import { analyzeSheet, inferType, fillLabel, findRepeatedGroups, suggestRelationships, findDuplicatedColumns, buildAuditPrefill } from "../js/infer.js";
+import { analyzeSheet, detectHeaderRow, inferType, fillLabel, findRepeatedGroups, suggestRelationships, findDuplicatedColumns, buildAuditPrefill } from "../js/infer.js";
 import { exportMarkdown } from "../js/export-md.js";
 
 let passed = 0;
@@ -90,6 +90,49 @@ ok("repeated groups found", () => {
 });
 ok("repeated groups ignore single numbered columns", () => {
   assert.deepEqual(findRepeatedGroups(["Address 1", "City", "State"]), []);
+});
+
+console.log("inference: report-style sheets (title block above the header)");
+// Modeled on a real billing-statement .xls: merged title rows, a date line,
+// blank spacers, the real header in row 10, then totals and a footer code.
+const mkBillingReport = () => {
+  const pad = (cells) => [...cells, ...Array(9 - cells.length).fill(null)];
+  const rows = [
+    pad(["Current Billing Statement"]),
+    pad(["030-014956-SHOCK SQUAD"]),
+    pad(["00003-SHOCK SQUAD"]),
+    pad([]),
+    pad(["Due Date:December 2025"]),
+    pad([]), pad([]),
+    pad(["List of current premiums for coverage from 12/01/2025 through 12/31/2025"]),
+    pad([]),
+    ["Name", "Cert/SSN", "Class", "Dep Cd", "Member Rate($)", "Dependent Rate($)", "Adjustment Date", "Adjustment Amount($)", "Total Rate($)"],
+  ];
+  for (let i = 0; i < 21; i++) {
+    rows.push([`MEMBER,${i}`, 16 + i, 1, i % 2 ? "A" : "B", 8.07, i % 2 ? 0 : 6.45, null, 0, i % 2 ? 8.07 : 14.52]);
+  }
+  rows.push(pad([]));
+  rows.push([" ", " ", " ", " ", " ", " ", "Total Current Premium($)", " ", 220.2]);
+  rows.push(pad([]));
+  rows.push([" ", " ", " ", " ", " ", " ", "TOTAL AMOUNT BILLED($)", " ", 212.13]);
+  rows.push(pad([]));
+  rows.push(pad(["0 03001495600003 00000021213"]));
+  return rows;
+};
+const billing = analyzeSheet("Current Billing Statement", mkBillingReport());
+ok("header found below the title block", () => {
+  assert.equal(detectHeaderRow(mkBillingReport()), 9);
+  assert.deepEqual(billing.headerRow.slice(0, 3), ["Name", "Cert/SSN", "Class"]);
+});
+ok("preamble, blank rows, and total/footer rows excluded from the body", () => {
+  assert.equal(billing.rowCount, 21);
+  assert.equal(billing.columns.find((c) => c.name === "Name").fillLabel, "always");
+  const name = billing.columns.find((c) => c.name === "Name");
+  assert.ok(![...name._values].some((v) => /Total|Statement/.test(v)), "no footer junk in values");
+});
+ok("plain sheets keep row 1 as the header", () => {
+  assert.equal(detectHeaderRow(mkJobs()), 0);
+  assert.equal(detectHeaderRow(mkCustomers()), 0);
 });
 
 console.log("inference: cross-sheet");

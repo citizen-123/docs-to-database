@@ -315,6 +315,40 @@ input.suggested, textarea.suggested {
   #toast { transition: none; }
 }
 
+/* prev/next pager at the bottom of every pane */
+.pager {
+  max-width: 980px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+.pager-btn {
+  font-family: var(--sans);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 48%;
+  padding: 10px 14px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  text-align: left;
+  cursor: pointer;
+}
+.pager-btn.next { align-items: flex-end; text-align: right; }
+.pager-dir {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--carbon);
+}
+.pager-target { font-size: 14px; font-weight: 600; color: var(--ink); }
+.pager-btn:hover { background: var(--carbon); border-color: var(--carbon); }
+.pager-btn:hover .pager-dir, .pager-btn:hover .pager-target { color: #fff; }
+
 /* print holder hidden on screen */
 #print-holder { display: none; }
 
