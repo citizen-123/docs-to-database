@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Templates — docs-to-database</title>
-  <meta name="description" content="The original Markdown worksheets behind the Database Discovery Packet, for filling out manually." />
+  <meta name="description" content="The original Markdown worksheets behind the Database Discovery Packet, downloadable as Markdown, Word, or PDF." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -37,24 +37,104 @@
       margin: 0 0 6px;
     }
     h1 { font-family: var(--serif); font-weight: 600; font-size: 30px; margin: 0 0 8px; }
-    .blurb { color: var(--ink-soft); margin: 0 0 26px; max-width: 60ch; }
+    .blurb { color: var(--ink-soft); margin: 0 0 20px; max-width: 60ch; }
+    .all-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--paper-raised);
+      border: 1px solid var(--rule);
+      border-left: 3px solid var(--carbon);
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      font-size: 14px;
+    }
+    .all-row label { font-weight: 600; }
+    .all-row select {
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 6px 8px;
+      border: 1px solid var(--rule);
+      background: #fff;
+      color: var(--ink);
+    }
     ol { list-style: none; margin: 0; padding: 0; }
-    li { margin-bottom: 10px; }
-    li a {
-      display: block;
+    li {
       background: var(--paper-raised);
       border: 1px solid var(--rule);
       border-left: 3px solid var(--rule);
       padding: 12px 16px;
-      text-decoration: none;
-      color: var(--ink);
+      margin-bottom: 10px;
     }
-    li a:hover { border-left-color: var(--carbon); }
+    li:hover { border-left-color: var(--carbon); }
+    li a { text-decoration: none; color: var(--ink); display: block; }
     .t-file { font-family: var(--mono); font-size: 12px; color: var(--carbon); display: block; }
     .t-name { font-weight: 600; }
     .t-sub { color: var(--ink-soft); font-size: 13.5px; display: block; }
+    .t-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .dl-btn {
+      font-family: var(--sans);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 5px 11px;
+      background: transparent;
+      color: var(--carbon);
+      border: 1px dashed var(--carbon);
+      cursor: pointer;
+    }
+    .dl-btn:hover { background: var(--carbon); color: #fff; border-style: solid; }
+    .dl-btn.solid { border-style: solid; background: var(--carbon); color: #fff; }
+    .dl-btn.solid:hover { background: #173a73; border-color: #173a73; }
     .back { font-size: 14px; color: var(--carbon); }
     footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-soft); }
+    #toast {
+      position: fixed;
+      bottom: 22px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 13.5px;
+      padding: 10px 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      max-width: min(560px, 90vw);
+    }
+    #toast.show { opacity: 1; }
+    #print-holder { display: none; }
+
+    @media print {
+      body.printing main, body.printing #toast { display: none !important; }
+      body.printing #print-holder { display: block; }
+      .print-tpl { page-break-before: always; }
+      .print-tpl:first-child { page-break-before: auto; }
+      #print-holder {
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        font-size: 10.5pt;
+        color: #111;
+        line-height: 1.45;
+      }
+      #print-holder h1 { font-family: "IBM Plex Serif", georgia, serif; font-size: 20pt; margin: 0 0 10pt; }
+      #print-holder h2 { font-family: "IBM Plex Serif", georgia, serif; font-size: 14pt; margin: 14pt 0 6pt; }
+      #print-holder h3, #print-holder h4 { font-size: 11.5pt; margin: 10pt 0 4pt; }
+      #print-holder table { border-collapse: collapse; width: 100%; margin: 6pt 0; page-break-inside: avoid; }
+      #print-holder th, #print-holder td { border: 0.75pt solid #999; padding: 3pt 5pt; text-align: left; vertical-align: top; font-size: 9.5pt; }
+      #print-holder th { background: #ede8dc; }
+      #print-holder pre {
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+        font-size: 9pt;
+        background: #f2efe6;
+        border: 0.75pt solid #ccc;
+        padding: 6pt;
+        min-height: 40pt;
+        white-space: pre-wrap;
+      }
+      #print-holder code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 9.5pt; }
+      #print-holder blockquote { margin: 6pt 0 6pt 10pt; padding-left: 8pt; border-left: 2pt solid #d8d3c4; color: #444; }
+      #print-holder blockquote p { margin: 2pt 0; }
+      #print-holder hr { border: none; border-top: 0.75pt solid #999; margin: 10pt 0; }
+    }
   </style>
 </head>
 <body>
@@ -62,44 +142,103 @@
     <p class="eyebrow">docs-to-database</p>
     <h1>Markdown templates</h1>
     <p class="blurb">
-      The original worksheets behind the Database Discovery Packet, as plain
-      Markdown — for people who'd rather skip the site and fill things out in a
-      text editor or on paper. Work through them in order. Your browser will
-      show each file as plain text; use right-click → "Save link as…" to download.
+      The original worksheets behind the Database Discovery Packet — for people
+      who'd rather skip the site and fill things out in a text editor, in Word,
+      or on paper. Work through them in order. The PDF buttons open your
+      browser's print dialog: choose "Save as PDF" there.
     </p>
+
+    <div class="all-row">
+      <label for="all-format">Download all six as</label>
+      <select id="all-format">
+        <option value="md">Markdown</option>
+        <option value="docx">Word Doc</option>
+        <option value="pdf">PDF</option>
+      </select>
+      <button class="dl-btn solid" id="btn-all" type="button">Download All</button>
+    </div>
+
     <ol>
-      <li><a href="00-START-HERE.md">
-        <span class="t-file">00-START-HERE.md</span>
-        <span class="t-name">Start Here</span>
-        <span class="t-sub">What the packet is, ground rules, and how to work through it</span>
-      </a></li>
-      <li><a href="01-noun-harvest.md">
-        <span class="t-file">01-noun-harvest.md</span>
-        <span class="t-name">Worksheet 1: Noun Harvest</span>
-        <span class="t-sub">List the "things" your business keeps track of</span>
-      </a></li>
-      <li><a href="02-spreadsheet-audit.md">
-        <span class="t-file">02-spreadsheet-audit.md</span>
-        <span class="t-name">Worksheet 2: Spreadsheet Audit</span>
-        <span class="t-sub">Document one existing spreadsheet — one copy per spreadsheet</span>
-      </a></li>
-      <li><a href="03-entity-worksheet.md">
-        <span class="t-file">03-entity-worksheet.md</span>
-        <span class="t-name">Worksheet 3: Entity Worksheet</span>
-        <span class="t-sub">The life story of one "thing" — one copy per thing</span>
-      </a></li>
-      <li><a href="04-relationships.md">
-        <span class="t-file">04-relationships.md</span>
-        <span class="t-name">Worksheet 4: Relationships</span>
-        <span class="t-sub">How your things connect — the skeleton of the database</span>
-      </a></li>
-      <li><a href="05-data-dictionary.md">
-        <span class="t-file">05-data-dictionary.md</span>
-        <span class="t-name">Worksheet 5: Data Dictionary</span>
-        <span class="t-sub">Every field, its type, its valid values — one copy per thing</span>
-      </a></li>
+      <li data-file="00-START-HERE.md">
+        <a href="00-START-HERE.md">
+          <span class="t-file">00-START-HERE.md</span>
+          <span class="t-name">Start Here</span>
+          <span class="t-sub">What the packet is, ground rules, and how to work through it</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
+      <li data-file="01-noun-harvest.md">
+        <a href="01-noun-harvest.md">
+          <span class="t-file">01-noun-harvest.md</span>
+          <span class="t-name">Worksheet 1: Noun Harvest</span>
+          <span class="t-sub">List the "things" your business keeps track of</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
+      <li data-file="02-spreadsheet-audit.md">
+        <a href="02-spreadsheet-audit.md">
+          <span class="t-file">02-spreadsheet-audit.md</span>
+          <span class="t-name">Worksheet 2: Spreadsheet Audit</span>
+          <span class="t-sub">Document one existing spreadsheet — one copy per spreadsheet</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
+      <li data-file="03-entity-worksheet.md">
+        <a href="03-entity-worksheet.md">
+          <span class="t-file">03-entity-worksheet.md</span>
+          <span class="t-name">Worksheet 3: Entity Worksheet</span>
+          <span class="t-sub">The life story of one "thing" — one copy per thing</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
+      <li data-file="04-relationships.md">
+        <a href="04-relationships.md">
+          <span class="t-file">04-relationships.md</span>
+          <span class="t-name">Worksheet 4: Relationships</span>
+          <span class="t-sub">How your things connect — the skeleton of the database</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
+      <li data-file="05-data-dictionary.md">
+        <a href="05-data-dictionary.md">
+          <span class="t-file">05-data-dictionary.md</span>
+          <span class="t-name">Worksheet 5: Data Dictionary</span>
+          <span class="t-sub">Every field, its type, its valid values — one copy per thing</span>
+        </a>
+        <div class="t-actions">
+          <button class="dl-btn" type="button" data-format="md">Markdown</button>
+          <button class="dl-btn" type="button" data-format="docx">Word Doc</button>
+          <button class="dl-btn" type="button" data-format="pdf" title="Opens the print dialog — choose 'Save as PDF'">PDF</button>
+        </div>
+      </li>
     </ol>
     <footer><a class="back" href="../">← Back to the interactive packet</a></footer>
   </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="print-holder" aria-hidden="true"></div>
+
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <script type="module" src="templates.js"></script>
 </body>
 </html>

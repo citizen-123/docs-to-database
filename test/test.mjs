@@ -6,6 +6,8 @@ import * as S from "../js/state.js";
 import { analyzeSheet, detectHeaderRow, inferType, fillLabel, findRepeatedGroups, suggestRelationships, findDuplicatedColumns, buildAuditPrefill } from "../js/infer.js";
 import { exportMarkdown } from "../js/export-md.js";
 import { importWorkbook } from "../js/importer.js";
+import { parseMarkdown, parseInline, blocksToHTML } from "../templates/templates.js";
+import { readFileSync, readdirSync } from "node:fs";
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed++; console.log("  ✓", name); };
@@ -269,6 +271,45 @@ ok("stale untouched duplicates from older imports get pruned", () => {
   importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
   assert.equal(S.state.data.spreadsheetAudits.length, 1);
   assert.equal(S.getPath("nounHarvest.sheetRows").filter((r) => r.sheet === "jobs.xlsx").length, 1);
+});
+
+console.log("template markdown parser (drives the Word/PDF downloads)");
+ok("inline bold/italic/code runs", () => {
+  assert.deepEqual(parseInline("**Goal:** list *things*, use `code`"), [
+    { text: "Goal:", bold: true },
+    { text: " list " },
+    { text: "things", italic: true },
+    { text: ", use " },
+    { text: "code", code: true },
+  ]);
+});
+ok("block types: headings, hr, quote, fence, table, lists, paragraphs", () => {
+  const blocks = parseMarkdown([
+    "# Title", "", "Some **bold** prose", "that wraps.", "", "---",
+    "> quoted line one", "> quoted line two",
+    "```", "(write here)", "```",
+    "| A | B |", "|---|---|", "| 1 | 2 |",
+    "- alpha", "- beta",
+    "1. first", "2. second",
+  ].join("\n"));
+  assert.deepEqual(blocks.map((b) => b.type), ["heading", "para", "hr", "quote", "code", "table", "list", "list"]);
+  assert.equal(blocks[1].runs.map((r) => r.text).join(""), "Some bold prose that wraps.");
+  assert.equal(blocks[3].lines.length, 2);
+  assert.equal(blocks[4].text, "(write here)");
+  assert.equal(blocks[5].rows.length, 2, "separator row dropped");
+  assert.equal(blocks[6].ordered, false);
+  assert.equal(blocks[7].ordered, true);
+});
+ok("every real template parses cleanly and round-trips to HTML", () => {
+  const dir = new URL("../templates/", import.meta.url);
+  for (const f of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
+    const blocks = parseMarkdown(readFileSync(new URL(f, dir), "utf8"));
+    assert.ok(blocks.length > 10, `${f} parsed into blocks`);
+    assert.equal(blocks[0].type, "heading", `${f} starts with a heading`);
+    const html = blocksToHTML(blocks);
+    assert.ok(!html.includes("**"), `${f}: no unparsed bold markers in HTML`);
+    assert.ok(!/\|---/.test(html), `${f}: no table separators leaked into HTML`);
+  }
 });
 
 console.log(`\nAll ${passed} tests passed.`);
