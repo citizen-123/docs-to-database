@@ -2,8 +2,83 @@
 // Expects the SheetJS global `XLSX` (loaded from CDN in index.html).
 
 import { analyzeSheet, suggestRelationships, findDuplicatedColumns, buildAuditPrefill } from "./infer.js";
-import { state, addInstance, addRow, getPath, setPath } from "./state.js";
+import { state, addInstance, removeInstance, addRow, removeRow, getPath, setPath, isSuggested } from "./state.js";
 import { getWorksheet } from "./schema.js";
+
+// ── re-import-safe state writes ─────────────────────────────────
+// Uploading the same file twice must refresh the previous import, not stack
+// duplicate audits, Part B rows, and dictionaries. A value is ours to
+// overwrite only while the human hasn't touched it: still flagged as a
+// suggestion, or empty.
+const blank = (v) => String(v ?? "").trim() === "";
+const overwritable = (path) => isSuggested(path) || blank(getPath(path));
+
+const AUDIT_TABLE = { key: "columns", machine: ["col", "example", "filled"], human: ["meaning", "describes"] };
+const DD_TABLE = { key: "fields", machine: ["field", "example", "required", "type", "choices"], human: ["meaning", "whoSets"] };
+
+function tableUntouched(tablePath, table) {
+  const rows = getPath(tablePath) || [];
+  return rows.every((row, i) =>
+    table.machine.every((c) => blank(row[c]) || isSuggested(`${tablePath}.${i}.${c}`)) &&
+    table.human.every((c) => blank(row[c]))
+  );
+}
+
+function replaceTable(tablePath, rows, table) {
+  for (const k of Object.keys(state.suggested)) {
+    if (k.startsWith(`${tablePath}.`)) delete state.suggested[k];
+  }
+  rows.forEach((row, i) => {
+    for (const c of table.machine) {
+      if (!blank(row[c])) state.suggested[`${tablePath}.${i}.${c}`] = true;
+    }
+  });
+  setPath(tablePath, rows);
+}
+
+function instanceUntouched(wsId, inst, table) {
+  const base = `${wsId}.${inst._id}`;
+  return Object.keys(inst).every(
+    (k) => k === "_id" || k === table.key || overwritable(`${base}.${k}`)
+  ) && tableUntouched(`${base}.${table.key}`, table);
+}
+
+// Add the instance, or — when one with the same matchField already exists —
+// refresh its untouched fields in place. Returns true when it refreshed.
+function upsertInstance(wsId, ws, prefill, suggestedPaths, matchField, table) {
+  const matches = state.data[wsId].filter((i) => i[matchField] === prefill[matchField]);
+  if (!matches.length) {
+    addInstance(wsId, ws, prefill, suggestedPaths);
+    return false;
+  }
+  const base = `${wsId}.${matches[0]._id}`;
+  for (const [key, value] of Object.entries(prefill)) {
+    if (key === matchField || key === table.key) continue;
+    const path = `${base}.${key}`;
+    if (overwritable(path)) setPath(path, value, { suggested: !blank(value) });
+  }
+  if (tableUntouched(`${base}.${table.key}`, table)) {
+    replaceTable(`${base}.${table.key}`, prefill[table.key], table);
+  }
+  // stale copies stacked up by earlier imports — safe to drop while untouched
+  for (const dup of matches.slice(1)) {
+    if (instanceUntouched(wsId, dup, table)) removeInstance(wsId, dup._id);
+  }
+  return true;
+}
+
+function upsertSheetRow(sheetName) {
+  const rows = getPath("nounHarvest.sheetRows") || [];
+  const firstIdx = rows.findIndex((r) => r.sheet === sheetName);
+  if (firstIdx === -1) {
+    addRow("nounHarvest.sheetRows", { sheet: sheetName, rowIs: "" }, { suggested: true });
+    return;
+  }
+  // drop duplicate rows for this sheet that the human never filled in
+  for (let i = rows.length - 1; i > firstIdx; i--) {
+    if (rows[i].sheet === sheetName && blank(rows[i].rowIs)) removeRow("nounHarvest.sheetRows", i);
+  }
+}
 
 // Accumulated analyses across all uploads this session, keyed by file+tab so a
 // re-upload refreshes its analysis instead of duplicating it. Relationship
@@ -35,7 +110,7 @@ export async function importGoogleSheetUrl(url) {
   return importWorkbook(wb, "Google Sheet");
 }
 
-function importWorkbook(wb, fileName) {
+export function importWorkbook(wb, fileName) {
   const tabNames = wb.SheetNames;
   const report = { fileName, tabs: [], relationships: [], duplicates: [], colorNote: false };
 
@@ -45,13 +120,13 @@ function importWorkbook(wb, fileName) {
     const analysis = analyzeSheet(tab, rows);
     sessionAnalyses.set(`${fileName}::${tab}`, analysis);
 
-    // 1) New Spreadsheet Audit instance, prefilled
+    // 1) Spreadsheet Audit instance, prefilled — or refreshed on re-upload
     const auditWs = getWorksheet("spreadsheetAudits");
     const { prefill, suggestedPaths } = buildAuditPrefill(analysis, fileName, tabNames);
-    const inst = addInstance("spreadsheetAudits", auditWs, prefill, suggestedPaths);
+    const refreshed = upsertInstance("spreadsheetAudits", auditWs, prefill, suggestedPaths, "name", AUDIT_TABLE);
 
-    // 2) Seed Worksheet 1 Part B (sheet → "one row = one ...?")
-    addRow("nounHarvest.sheetRows", { sheet: prefill.name, rowIs: "" }, { suggested: true });
+    // 2) Seed Worksheet 1 Part B (sheet → "one row = one ...?") — once per sheet
+    upsertSheetRow(prefill.name);
 
     // 3) Seed a Data Dictionary table for this sheet
     const ddWs = getWorksheet("dataDictionary");
@@ -68,12 +143,13 @@ function importWorkbook(wb, fileName) {
     ddRows.forEach((_, i) =>
       ddSuggested.push(`fields.${i}.field`, `fields.${i}.example`, `fields.${i}.required`, `fields.${i}.type`, `fields.${i}.choices`)
     );
-    addInstance("dataDictionary", ddWs, { entityName: prefill.name, fields: ddRows }, ddSuggested);
+    upsertInstance("dataDictionary", ddWs, { entityName: prefill.name, fields: ddRows }, ddSuggested, "entityName", DD_TABLE);
 
     report.tabs.push({
       name: tab,
       rowCount: analysis.rowCount,
       skippedRows: analysis.headerRowIndex,
+      refreshed,
       columnCount: analysis.columns.length,
       statusColumns: analysis.statusColumns.map((c) => c.name),
       repeatedGroups: analysis.repeatedGroups,

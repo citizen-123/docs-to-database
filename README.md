@@ -59,23 +59,6 @@ Plus:
 - **`templates/`** — the original Markdown worksheets, for people who'd rather
   skip the site entirely and fill things out manually.
 
-## Hosting on GitHub Pages
-
-The site is plain static files — no build step, no bundler, no Node required.
-
-1. Push this repository to GitHub
-2. Repo **Settings → Pages → Source**: select *Deploy from a branch*, branch
-   `main`, folder `/ (root)`
-3. Done. The site appears at `https://<user>.github.io/docs-to-database/`
-
-The two runtime libraries ([SheetJS](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)
-for spreadsheet parsing, [docx](https://unpkg.com/docx@8.5.0/build/index.umd.js)
-for Word export) load from CDNs, pinned to exact versions.
-
-To run locally, serve the folder with any static server
-(`python3 -m http.server`) — opening `index.html` via `file://` won't work
-because the app uses ES modules.
-
 ## How it's built
 
 ```
@@ -111,7 +94,7 @@ anything uncertain stays a visible amber suggestion or stays blank.
 node test/test.mjs
 ```
 
-30 tests cover schema integrity, type/choice/fill inference, repeated-group and
+33 tests cover schema integrity, header-row detection in report-style exports, type/choice/fill inference, repeated-group and
 cross-sheet relationship detection, the prefill pipeline, suggestion-flag
 lifecycle (including row-removal reindexing), JSON round-tripping and
 migration of old saves, and Markdown export. The repo was additionally
