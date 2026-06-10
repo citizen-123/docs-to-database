@@ -5,6 +5,7 @@ import { PACKET, getWorksheet } from "../js/schema.js";
 import * as S from "../js/state.js";
 import { analyzeSheet, detectHeaderRow, inferType, fillLabel, findRepeatedGroups, suggestRelationships, findDuplicatedColumns, buildAuditPrefill } from "../js/infer.js";
 import { exportMarkdown } from "../js/export-md.js";
+import { importWorkbook } from "../js/importer.js";
 
 let passed = 0;
 const ok = (name, fn) => { fn(); passed++; console.log("  ✓", name); };
@@ -234,6 +235,40 @@ ok("pipes and newlines escaped in cells", () => {
   S.setPath("nounHarvest.sheetRows.0.sheet", "a|b\nc");
   const md = exportMarkdown(S.state);
   assert.ok(md.includes("a\\|b<br>c"));
+});
+
+console.log("re-import (uploading the same file twice must not duplicate state)");
+// importWorkbook only needs sheet_to_json from the XLSX global; feed it
+// pre-parsed arrays-of-arrays so no spreadsheet library is required here.
+globalThis.XLSX = { utils: { sheet_to_json: (sheet) => sheet } };
+const wbOf = (name, rows) => ({ SheetNames: [name], Sheets: { [name]: rows } });
+
+S.clearAll();
+ok("re-upload refreshes instead of duplicating", () => {
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.state.data.spreadsheetAudits.length, 1);
+  assert.equal(S.state.data.dataDictionary.length, 1);
+  assert.equal(S.getPath("nounHarvest.sheetRows").filter((r) => r.sheet === "jobs.xlsx").length, 1);
+});
+ok("human edits survive a re-upload", () => {
+  const audit = S.state.data.spreadsheetAudits[0];
+  S.setPath("nounHarvest.sheetRows.0.rowIs", "a job");
+  S.setPath(`spreadsheetAudits.${audit._id}.columns.0.meaning`, "internal job number");
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.getPath("nounHarvest.sheetRows.0.rowIs"), "a job");
+  assert.equal(S.getPath(`spreadsheetAudits.${audit._id}.columns.0.meaning`), "internal job number");
+  assert.equal(S.state.data.spreadsheetAudits.length, 1);
+});
+ok("stale untouched duplicates from older imports get pruned", () => {
+  // simulate the pre-fix bug: a leftover untouched audit + Part B row for the same file
+  const { prefill: p, suggestedPaths: sp } = buildAuditPrefill(jobs, "jobs.xlsx", ["Jobs"]);
+  S.addInstance("spreadsheetAudits", getWorksheet("spreadsheetAudits"), p, sp);
+  S.addRow("nounHarvest.sheetRows", { sheet: "jobs.xlsx", rowIs: "" }, { suggested: true });
+  assert.equal(S.state.data.spreadsheetAudits.length, 2);
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.state.data.spreadsheetAudits.length, 1);
+  assert.equal(S.getPath("nounHarvest.sheetRows").filter((r) => r.sheet === "jobs.xlsx").length, 1);
 });
 
 console.log(`\nAll ${passed} tests passed.`);
