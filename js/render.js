@@ -6,8 +6,19 @@
 import { PACKET, getWorksheet } from "./schema.js";
 import {
   state, getPath, setPath, addInstance, removeInstance, addRow, removeRow,
-  isSuggested, confirmSuggestion, completion, touch,
+  isSuggested, confirmSuggestion, confirmAll, suggestionCountFor, completion, touch,
 } from "./state.js";
+
+function confirmAllButton(prefix, where) {
+  const n = suggestionCountFor(prefix);
+  if (!n) return null;
+  return el("button", {
+    class: "confirm-all-btn",
+    type: "button",
+    title: "Mark every amber value " + where + " as reviewed and correct",
+    onclick: () => { confirmAll(prefix); renderApp(); },
+  }, `✓ Confirm all ${n} suggested value${n === 1 ? "" : "s"} ${where}`);
+}
 
 function el(tag, attrs = {}, ...kids) {
   const node = document.createElement(tag);
@@ -144,6 +155,8 @@ function worksheetPane(ws) {
   );
 
   if (!ws.repeatable) {
+    const cab = confirmAllButton(ws.id, "on this worksheet");
+    if (cab) pane.append(cab);
     const basePath = `${ws.id}.`;
     for (const f of ws.fields) pane.append(fieldBlock(f, basePath, state.data[ws.id]));
     return pane;
@@ -180,6 +193,8 @@ function worksheetPane(ws) {
         }, "×")
       )
     );
+    const cab = confirmAllButton(`${ws.id}.${inst._id}`, "in this card");
+    if (cab) card.append(cab);
     const basePath = `${ws.id}.${inst._id}.`;
     for (const f of ws.fields) card.append(fieldBlock(f, basePath, inst));
     pane.append(card);

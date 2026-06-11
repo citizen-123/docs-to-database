@@ -273,6 +273,57 @@ ok("stale untouched duplicates from older imports get pruned", () => {
   assert.equal(S.getPath("nounHarvest.sheetRows").filter((r) => r.sheet === "jobs.xlsx").length, 1);
 });
 
+console.log("import polish: types, dictionary source, bulk confirm");
+ok("month-name dates detected", () => {
+  assert.equal(inferType(["NOVEMBER, 2025", "Dec 2025", "January 5, 2026"]), "date");
+});
+ok("money-hinted headers promote number → money; plain numbers don't", () => {
+  const rows = [["Dependent Rate($)", "Cert/SSN"]];
+  for (let i = 0; i < 20; i++) rows.push([i % 2 ? 16.5 : 0, 100 + i]);
+  const a = analyzeSheet("Rates", rows);
+  assert.equal(a.columns[0].type, "money");
+  assert.equal(a.columns[1].type, "number");
+});
+ok("imported dictionary: entityName left blank, source keys the re-upload", () => {
+  S.clearAll();
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.state.data.dataDictionary.length, 1);
+  const dd = S.state.data.dataDictionary[0];
+  assert.equal(dd.entityName, "");
+  assert.equal(dd.source, "jobs.xlsx");
+  assert.ok(S.isSuggested(`dataDictionary.${dd._id}.source`));
+});
+ok("dictionary from a pre-source import is adopted, not duplicated", () => {
+  S.clearAll();
+  // legacy shape: filename in entityName, no source
+  const ddWs = getWorksheet("dataDictionary");
+  const legacy = S.addInstance("dataDictionary", ddWs, { entityName: "jobs.xlsx", fields: [] }, ["entityName"]);
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.state.data.dataDictionary.length, 1);
+  assert.equal(S.state.data.dataDictionary[0]._id, legacy._id);
+  assert.equal(S.getPath(`dataDictionary.${legacy._id}.source`), "jobs.xlsx");
+  assert.equal(S.getPath(`dataDictionary.${legacy._id}.entityName`), "", "unconfirmed filename-name cleared");
+});
+ok("a human-named legacy dictionary keeps its name", () => {
+  S.clearAll();
+  const ddWs = getWorksheet("dataDictionary");
+  const named = S.addInstance("dataDictionary", ddWs, { entityName: "jobs.xlsx", fields: [] }, []);
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  assert.equal(S.getPath(`dataDictionary.${named._id}.entityName`), "jobs.xlsx");
+  assert.equal(S.state.data.dataDictionary.length, 1);
+});
+ok("confirmAll clears flags under a prefix only", () => {
+  S.clearAll();
+  importWorkbook(wbOf("Jobs", mkJobs()), "jobs.xlsx");
+  const before = S.suggestionCount();
+  const dd = S.state.data.dataDictionary[0];
+  const n = S.confirmAll(`dataDictionary.${dd._id}`);
+  assert.ok(n > 0 && S.suggestionCountFor(`dataDictionary.${dd._id}`) === 0);
+  assert.equal(S.suggestionCount(), before - n, "other worksheets untouched");
+  assert.ok(S.suggestionCountFor("spreadsheetAudits") > 0);
+});
+
 console.log("template markdown parser (drives the Word/PDF downloads)");
 ok("inline bold/italic/code runs", () => {
   assert.deepEqual(parseInline("**Goal:** list *things*, use `code`"), [

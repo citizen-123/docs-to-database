@@ -128,7 +128,9 @@ export function importWorkbook(wb, fileName) {
     // 2) Seed Worksheet 1 Part B (sheet → "one row = one ...?") — once per sheet
     upsertSheetRow(prefill.name);
 
-    // 3) Seed a Data Dictionary table for this sheet
+    // 3) Seed a Data Dictionary table for this sheet. The dictionary is keyed
+    //    by `source` (the file/tab); the Thing's name is a semantic question,
+    //    so entityName stays blank for the human — a filename is not a noun.
     const ddWs = getWorksheet("dataDictionary");
     const ddRows = analysis.columns.map((c) => ({
       field: c.name,
@@ -139,11 +141,22 @@ export function importWorkbook(wb, fileName) {
       choices: c.isChoice ? c.distinctValues.join(", ") : "",
       whoSets: "",
     }));
-    const ddSuggested = ["entityName"];
+    const ddSuggested = ["source"];
     ddRows.forEach((_, i) =>
       ddSuggested.push(`fields.${i}.field`, `fields.${i}.example`, `fields.${i}.required`, `fields.${i}.type`, `fields.${i}.choices`)
     );
-    upsertInstance("dataDictionary", ddWs, { entityName: prefill.name, fields: ddRows }, ddSuggested, "entityName", DD_TABLE);
+    // dictionaries from imports before the `source` field was added were
+    // keyed by filename-as-entityName — adopt them instead of duplicating
+    const legacy = state.data.dataDictionary.find(
+      (i) => !String(i.source ?? "").trim() && i.entityName === prefill.name
+    );
+    if (legacy) {
+      setPath(`dataDictionary.${legacy._id}.source`, prefill.name, { suggested: true });
+      if (isSuggested(`dataDictionary.${legacy._id}.entityName`)) {
+        setPath(`dataDictionary.${legacy._id}.entityName`, "");
+      }
+    }
+    upsertInstance("dataDictionary", ddWs, { source: prefill.name, fields: ddRows }, ddSuggested, "source", DD_TABLE);
 
     report.tabs.push({
       name: tab,

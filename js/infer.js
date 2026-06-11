@@ -6,6 +6,10 @@ const CHOICE_MAX_DISTINCT = 12;
 const CHOICE_MIN_ROWS = 15;
 
 // ── per-column analysis ─────────────────────────────────────────
+// "NOVEMBER, 2025", "Nov 2025", "January 5, 2026" — month-name dates that the
+// slash/dash rule below misses.
+const MONTH_DATE = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,?\s+(\d{1,2}(st|nd|rd|th)?,?\s+)?\d{2,4}$/i;
+
 export function inferType(values) {
   // values: non-empty samples (strings or native types from SheetJS)
   let dates = 0, numbers = 0, currency = 0, yesno = 0;
@@ -17,6 +21,7 @@ export function inferType(values) {
     if (/^(y|n|yes|no|true|false|x|✓)$/i.test(s)) { yesno++; continue; }
     if (/^[$€£]\s?-?[\d,]+(\.\d+)?$/.test(s) || /^-?[\d,]+\.\d{2}$/.test(s)) { currency++; continue; }
     if (s !== "" && !isNaN(Number(s.replace(/,/g, "")))) { numbers++; continue; }
+    if (MONTH_DATE.test(s)) { dates++; continue; }
     if (!isNaN(Date.parse(s)) && /[\/\-]/.test(s) && /\d/.test(s)) { dates++; continue; }
   }
   const dominant = (count) => count / n >= 0.85;
@@ -91,7 +96,13 @@ export function analyzeSheet(sheetName, rows) {
       const key = v instanceof Date ? v.toISOString().slice(0, 10) : String(v).trim();
       distinct.set(key, (distinct.get(key) || 0) + 1);
     }
-    const type = inferType(raw);
+    let type = inferType(raw);
+    // Header hint: "Member Rate($)" and "Dependent Rate($)" should land on the
+    // same type even when one column's values (16.5, 0) miss the strict
+    // two-decimal currency pattern.
+    if (type === "number" && /[$€£]|\b(rate|price|amount|cost|total|fee|charge|paid|balance)\b/i.test(name)) {
+      type = "money";
+    }
     const isChoice =
       type === "text" &&
       raw.length >= CHOICE_MIN_ROWS &&

@@ -95,6 +95,21 @@ export function isSuggested(path) {
   return !!state.suggested[path];
 }
 
+const underPrefix = (key, prefix) => key === prefix || key.startsWith(prefix + ".");
+
+/** Pending suggestions under a path prefix (worksheet id or instance path). */
+export function suggestionCountFor(prefix) {
+  return Object.keys(state.suggested).filter((k) => underPrefix(k, prefix)).length;
+}
+
+/** Confirm every pending suggestion under a path prefix. Returns the count. */
+export function confirmAll(prefix) {
+  const keys = Object.keys(state.suggested).filter((k) => underPrefix(k, prefix));
+  for (const k of keys) delete state.suggested[k];
+  if (keys.length) emit({ type: "confirm", path: prefix });
+  return keys.length;
+}
+
 // ── repeatable instances ────────────────────────────────────────
 export function addInstance(wsId, ws, prefill = {}, suggestedPaths = []) {
   const inst = { _id: uid(), ...blankInstance(ws), ...prefill };

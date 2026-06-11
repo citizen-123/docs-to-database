@@ -1,7 +1,8 @@
 // app.js — bootstrap and toolbar wiring.
 
-import { state, loadFromStorage, clearAll, exportJSON, importJSON, subscribe, suggestionCount } from "./state.js";
+import { state, loadFromStorage, clearAll, exportJSON, importJSON, subscribe, suggestionCount, suggestionCountFor } from "./state.js";
 import { renderApp, setView, setImportReport, currentView } from "./render.js";
+import { PACKET } from "./schema.js";
 import { exportMarkdown, downloadText } from "./export-md.js";
 import { exportDocx, fileStem } from "./export-docx.js";
 import { printReport, printBlankPacket } from "./export-pdf.js";
@@ -19,6 +20,14 @@ function refreshSuggestionBadge() {
   const n = suggestionCount();
   const badge = document.getElementById("suggestion-badge");
   badge.textContent = n ? `${n} suggested value${n === 1 ? "" : "s"} awaiting review` : "";
+  badge.title = n ? "Click to jump to the next worksheet with unreviewed suggestions" : "";
+}
+
+function wireSuggestionBadge() {
+  document.getElementById("suggestion-badge").addEventListener("click", () => {
+    const ws = PACKET.worksheets.find((w) => suggestionCountFor(w.id) > 0);
+    if (ws) setView(ws.id);
+  });
 }
 
 // ── toolbar actions ─────────────────────────────────────────────
@@ -173,6 +182,7 @@ function wireImportDelegation() {
 // ── boot ────────────────────────────────────────────────────────
 loadFromStorage();
 wireToolbar();
+wireSuggestionBadge();
 wireImportDelegation();
 subscribe(() => refreshSuggestionBadge());
 renderApp();

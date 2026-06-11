@@ -359,7 +359,14 @@ export const PACKET = {
       instanceNoun: "thing",
       instanceLabelField: "entityName",
       fields: [
-        { key: "entityName", kind: "text", label: "Thing", help: "e.g., \u201CJob\u201D — should match a row on your master list" },
+        {
+          key: "entityName", kind: "text", label: "Thing",
+          help: "e.g., \u201CJob\u201D — should match a row on your master list. Name the noun, not the spreadsheet: if the fields below came from \u201CBillingReport.xls\u201D, the thing is probably \u201CMember\u201D or \u201CPremium\u201D.",
+        },
+        {
+          key: "source", kind: "text", label: "From spreadsheet (if imported)",
+          help: "Filled in automatically when this table was seeded by an upload on the Import tab. Re-uploading the same file refreshes this copy.",
+        },
         {
           key: "fields",
           kind: "table",

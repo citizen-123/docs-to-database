@@ -44,6 +44,7 @@ body {
 .brand-name { font-family: var(--mono); font-weight: 500; font-size: 15px; letter-spacing: 0.02em; }
 .brand-sub { font-size: 11px; color: #aeb6c2; text-transform: uppercase; letter-spacing: 0.14em; }
 #suggestion-badge { font-size: 12px; color: var(--amber); font-family: var(--mono); }
+#suggestion-badge:not(:empty) { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
 .tool-group { display: flex; gap: 1px; border: 1px solid #4a5160; }
 .toolbar button {
@@ -173,6 +174,20 @@ input.suggested, textarea.suggested {
   cursor: pointer;
 }
 .confirm-btn:hover { background: var(--done); border-color: var(--done); color: #fff; }
+.confirm-all-btn {
+  display: block;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  margin: 0 0 14px;
+  padding: 6px 12px;
+  background: var(--amber);
+  color: var(--amber-ink);
+  border: 1px solid #e3c98e;
+  cursor: pointer;
+}
+.instance-card .confirm-all-btn { margin: 10px 16px 12px; }
+.confirm-all-btn:hover { background: var(--done); border-color: var(--done); color: #fff; }
 
 /* tables */
 .table-field { overflow-x: auto; }
